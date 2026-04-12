@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>自动贩卖机的最后一夜</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0a0f;font-family:'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;color:#e0e0e0}
+#app{width:100%;height:100%;overflow-y:auto;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch}
+#app::-webkit-scrollbar{display:none}
+.scene{width:100%;min-height:100vh;scroll-snap-align:start;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+
+/* ===== SCENE BACKGROUNDS ===== */
+.s-cover{background:linear-gradient(180deg,#0d0d1a 0%,#1a1a2e 40%,#16213e 70%,#0f3460 100%)}
+.s-cover::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 30% at 50% 70%,rgba(255,140,0,.15),transparent);pointer-events:none}
+
+.s-lobby{background:linear-gradient(180deg,#1a1a2e 0%,#0f1923 50%,#1a2332 100%)}
+.s-lobby::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 40% at 50% 60%,rgba(255,100,50,.08),transparent);pointer-events:none}
+
+.s-arrival{background:linear-gradient(180deg,#0f1923 0%,#162447 50%,#1f4068 100%)}
+
+.s-talk{background:linear-gradient(180deg,#1a1a2e 0%,#1f1f3a 30%,#16213e 70%,#0f1923 100%)}
+.s-talk::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 50% 50% at 30% 50%,rgba(255,180,50,.06),transparent),radial-gradient(ellipse 50% 50% at 70% 50%,rgba(0,200,255,.06),transparent);pointer-events:none}
+
+.s-milk{background:linear-gradient(180deg,#1a1028 0%,#2d1b3d 30%,#3d2255 60%,#1a1028 100%)}
+.s-milk::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 40% 30% at 50% 40%,rgba(255,200,100,.1),transparent);pointer-events:none}
+
+.s-leave{background:linear-gradient(180deg,#0f0f1a 0%,#1a1a2e 40%,#2a1a3e 70%,#0f0f1a 100%)}
+.s-leave::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 40% at 50% 30%,rgba(255,140,0,.1),transparent);pointer-events:none}
+
+.s-end{background:linear-gradient(180deg,#0a0a15 0%,#0f0f2a 30%,#1a1a3a 60%,#0a0a15 100%)}
+.s-end::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 50% at 50% 50%,rgba(255,180,80,.06),transparent);pointer-events:none}
+
+/* ===== SCENE CONTENT ===== */
+.scene-inner{position:relative;z-index:1;width:100%;max-width:480px;padding:40px 24px;text-align:center}
+
+/* Title */
+.title-main{font-size:32px;font-weight:800;letter-spacing:4px;line-height:1.4;color:#fff;text-shadow:0 0 40px rgba(255,140,0,.3)}
+.title-sub{font-size:14px;color:rgba(255,255,255,.4);margin-top:16px;letter-spacing:2px}
+.title-line{width:60px;height:3px;background:linear-gradient(90deg,transparent,#ff8c00,transparent);margin:24px auto;border-radius:2px}
+.title-tag{display:inline-block;padding:6px 16px;border:1px solid rgba(255,140,0,.3);border-radius:20px;font-size:12px;color:rgba(255,180,100,.7);margin-top:8px}
+
+/* Vending machine art (CSS) */
+.vending-machine{width:200px;height:260px;margin:30px auto;position:relative;border-radius:12px;overflow:hidden;border:2px solid rgba(255,255,255,.1);box-shadow:0 0 60px rgba(255,140,0,.15)}
+.vending-glass{width:180px;height:160px;margin:10px auto;border-radius:6px;background:linear-gradient(180deg,rgba(255,200,100,.08),rgba(0,0,0,.3));border:1px solid rgba(255,255,255,.05);position:relative;overflow:hidden}
+.vending-glass::after{content:'';position:absolute;top:-30%;left:-20%;width:60%;height:160%;background:linear-gradient(135deg,rgba(255,255,255,.06),transparent);transform:rotate(15deg)}
+.vending-slot{width:40px;height:55px;border-radius:4px;position:absolute;border:1px solid rgba(255,255,255,.08)}
+.v-slot1{background:rgba(255,100,100,.15);top:15px;left:15px}
+.v-slot2{background:rgba(100,200,255,.15);top:15px;left:70px}
+.v-slot3{background:rgba(255,200,100,.15);top:15px;left:125px}
+.v-slot4{background:rgba(100,255,150,.15);top:80px;left:15px}
+.v-slot5{background:rgba(200,150,255,.15);top:80px;left:70px}
+.v-slot6{background:rgba(255,150,200,.15);top:80px;left:125px}
+.vending-label{text-align:center;padding:8px;font-size:10px;color:rgba(255,255,255,.3);letter-spacing:1px}
+.vending-led{display:inline-block;width:6px;height:6px;border-radius:50%;background:#ff8c00;box-shadow:0 0 8px #ff8c00;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* Chapter header */
+.ch-num{font-size:11px;color:rgba(255,140,0,.6);letter-spacing:3px;text-transform:uppercase}
+.ch-title{font-size:24px;font-weight:700;color:#fff;margin-top:6px;text-shadow:0 0 30px rgba(255,140,0,.2)}
+.ch-line{width:40px;height:2px;background:rgba(255,140,0,.4);margin:16px auto;border-radius:1px}
+
+/* Narration */
+.narration{font-size:15px;line-height:2;color:rgba(255,255,255,.55);text-align:center;max-width:360px;margin:0 auto}
+
+/* Dialogue bubbles */
+.bubble{margin:16px 0;text-align:left;opacity:0;transform:translateY(20px);transition:all .6s cubic-bezier(.16,1,.3,1)}
+.bubble.show{opacity:1;transform:translateY(0)}
+.bubble-inner{padding:14px 18px;border-radius:16px;position:relative;max-width:380px;margin:0 auto}
+.bubble-left .bubble-inner{margin-left:60px}
+.bubble-right .bubble-inner{margin-right:60px;margin-left:auto}
+
+.bubble-old{background:linear-gradient(135deg,rgba(255,140,0,.12),rgba(255,100,50,.08));border:1px solid rgba(255,140,0,.15)}
+.bubble-new{background:linear-gradient(135deg,rgba(0,180,255,.12),rgba(0,140,255,.08));border:1px solid rgba(0,180,255,.15)}
+.bubble-guard{background:linear-gradient(135deg,rgba(180,180,180,.1),rgba(150,150,150,.08));border:1px solid rgba(180,180,180,.15)}
+.bubble-system{background:linear-gradient(135deg,rgba(0,255,180,.08),rgba(0,200,150,.06));border:1px solid rgba(0,255,180,.1);font-style:italic}
+
+.bubble-name{font-size:12px;font-weight:600;margin-bottom:4px;letter-spacing:1px}
+.name-old{color:#ff8c42}
+.name-new{color:#00b4ff}
+.name-guard{color:#aaa}
+.name-system{color:rgba(0,255,180,.6)}
+
+.bubble-text{font-size:15px;line-height:1.8;color:rgba(255,255,255,.85)}
+.typewriter{overflow:hidden;white-space:pre-wrap}
+
+/* Character avatars */
+.avatar{width:44px;height:44px;border-radius:50%;position:absolute;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+.avatar-left{left:8px;top:12px}
+.avatar-right{right:8px;top:12px}
+.av-old{background:linear-gradient(135deg,#ff8c42,#e67332)}
+.av-new{background:linear-gradient(135deg,#00b4ff,#0088cc)}
+.av-guard{background:linear-gradient(135deg,#888,#666)}
+
+/* Special scenes */
+.milk-bottle{width:60px;height:120px;margin:20px auto;border-radius:4px 4px 8px 8px;background:linear-gradient(180deg,rgba(255,220,150,.3),rgba(255,180,100,.2));border:1px solid rgba(255,200,150,.2);position:relative;overflow:hidden}
+.milk-cap{width:30px;height:12px;background:rgba(255,100,100,.4);margin:0 auto;border-radius:2px 2px 0 0}
+.milk-label{position:absolute;top:40px;left:50%;transform:translateX(-50%);font-size:9px;color:rgba(255,220,180,.5);writing-mode:vertical-rl;letter-spacing:2px}
+
+/* Glow text */
+.glow{color:#ff8c42;text-shadow:0 0 20px rgba(255,140,0,.5),0 0 40px rgba(255,140,0,.2)}
+.glow-blue{color:#00b4ff;text-shadow:0 0 20px rgba(0,180,255,.5)}
+
+/* Ending */
+.end-quote{font-size:22px;font-weight:300;line-height:2;color:rgba(255,255,255,.7);max-width:340px;margin:0 auto}
+.end-attr{font-size:13px;color:rgba(255,255,255,.3);margin-top:24px;letter-spacing:2px}
+.end-credits{text-align:center;margin-top:40px;font-size:11px;color:rgba(255,255,255,.2);line-height:2}
+
+/* Particles */
+.particles{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.particle{position:absolute;width:2px;height:2px;background:rgba(255,140,0,.4);border-radius:50%;animation:float linear infinite}
+@keyframes float{0%{transform:translateY(100vh) scale(0);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-10vh) scale(1);opacity:0}}
+
+/* Scroll hint */
+.scroll-hint{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:100;font-size:11px;color:rgba(255,255,255,.3);letter-spacing:2px;animation:hintFade 2s infinite;transition:opacity .5s}
+.scroll-hint.hide{opacity:0}
+@keyframes hintFade{0%,100%{opacity:.3}50%{opacity:.6}}
+.scroll-hint svg{display:block;margin:4px auto 0;width:16px;height:16px;fill:rgba(255,255,255,.3);animation:hintBounce 1.5s infinite}
+@keyframes hintBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
+
+/* Loading screen */
+#loading{position:fixed;inset:0;background:#0a0a0f;display:flex;align-items:center;justify-content:center;z-index:999;transition:opacity .8s}
+#loading.hide{opacity:0;pointer-events:none}
+.loader{width:40px;height:40px;border:2px solid rgba(255,140,0,.2);border-top-color:#ff8c00;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Scene-specific overlays */
+.station-lights{position:absolute;top:10%;left:0;right:0;height:60%;background:repeating-linear-gradient(90deg,transparent 0,transparent 48%,rgba(255,255,255,.02) 48%,rgba(255,255,255,.02) 52%,transparent 52%);pointer-events:none}
+.floor-reflect{position:absolute;bottom:0;left:0;right:0;height:30%;background:linear-gradient(0deg,rgba(255,140,0,.04),transparent);pointer-events:none}
+
+/* Responsive */
+@media(max-width:380px){
+.title-main{font-size:26px}
+.ch-title{font-size:20px}
+.bubble-text{font-size:14px}
+.vending-machine{width:160px;height:210px}
+.vending-glass{width:144px;height:130px}
+.vending-slot{width:34px;height:45px}
+.v-slot1{left:10px;top:10px}.v-slot2{left:54px;top:10px}.v-slot3{left:98px;top:10px}
+.v-slot4{left:10px;top:60px}.v-slot5{left:54px;top:60px}.v-slot6{left:98px;top:60px}
+}
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="loader"></div></div>
+<div id="app">
+
+<!-- ====== SCENE 0: COVER ====== -->
+<div class="scene s-cover" data-scene="0">
+  <div class="particles" id="p-cover"></div>
+  <div class="station-lights"></div>
+  <div class="scene-inner">
+    <div class="vending-machine">
+      <div class="vending-glass">
+        <div class="vending-slot v-slot1"></div>
+        <div class="vending-slot v-slot2"></div>
+        <div class="vending-slot v-slot3"></div>
+        <div class="vending-slot v-slot4"></div>
+        <div class="vending-slot v-slot5"></div>
+        <div class="vending-slot v-slot6"></div>
+      </div>
+      <div class="vending-label"><span class="vending-led"></span>&nbsp; 24H</div>
+    </div>
+    <div class="title-main" style="margin-top:24px">自动贩卖机<br>的最后一夜</div>
+    <div class="title-sub">THE LAST NIGHT OF VENDING MACHINE</div>
+    <div class="title-line"></div>
+    <div class="title-tag">📱 手机上下滑动阅读</div>
+    <div style="margin-top:40px;font-size:12px;color:rgba(255,255,255,.25);letter-spacing:1px">
+      Hermes Agent × 即梦AI 联合出品<br>
+      AI编剧 · AI配图 · 互动漫画
+    </div>
+  </div>
+</div>
+
+<!-- ====== SCENE 1: LOBBY NIGHT ====== -->
+<div class="scene s-lobby" data-scene="1">
+  <div class="floor-reflect"></div>
+  <div class="scene-inner">
+    <div class="ch-num">PROLOGUE</div>
+    <div class="ch-title">午夜的保安室</div>
+    <div class="ch-line"></div>
+    <div class="narration" style="margin-top:24px">
+      深夜十一点半，写字楼的自动贩卖机旁贴了一张通知——
+    </div>
+    <div style="margin:24px auto;padding:16px 20px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:8px;max-width:340px;text-align:center">
+      <div style="font-size:11px;color:rgba(255,255,255,.3);letter-spacing:2px;margin-bottom:8px">通 知</div>
+      <div style="font-size:14px;color:rgba(255,255,255,.6);line-height:1.8">
+        因设备升级，本贩卖机将于明日正式退役。届时将由新型智能贩卖机接管本区域。
+      </div>
+      <div style="font-size:11px;color:rgba(255,255,255,.2);margin-top:10px">—— 物业管理中心</div>
+    </div>
+    <div class="narration" style="margin-top:20px">
+      保安大叔撕下通知，<br>看了看那台老贩卖机，叹了口气。
+    </div>
+  </div>
+</div>
+
+<!-- ====== SCENE 2: THE OLD MACHINE ====== -->
+<div class="scene s-lobby" data-scene="2">
+  <div class="particles" id="p-machine"></div>
+  <div class="scene-inner">
+    <div class="ch-num">CHAPTER 1</div>
+    <div class="ch-title">阿柜</div>
+    <div class="ch-line"></div>
+    <div class="narration" style="margin-top:16px">
+      阿柜在这栋楼站了十五年。<br>它记得每一个人加班到深夜时买的第一瓶水。
+    </div>
+    <div class="bubble bubble-left" data-delay="300">
+      <div class="avatar avatar-left av-old">🏪</div>
+      <div class="bubble-inner bubble-old">
+        <div class="bubble-name name-old">阿 柜</div>
+        <div class="bubble-text typewriter" data-text="十五年。从2009年到现在。一万个深夜。也许更多。"></div>
+      </div>
+    </div>
+    <div class="bubble bubble-left" data-delay="600">
+      <div class="avatar avatar-left av-old">🏪</div>
+      <div class="bubble-inner bubble-old">
+        <div class="bubble-name name-old">阿 柜</div>
+        <div class="bubble-text typewriter" data-text="他们说我老了，按键迟钝了，偶尔吞钱。可是……有人问我愿不愿意留下吗？"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== SCENE 3: NEW MACHINE ARRIVES ====== -->
+<div class="scene s-arrival" data-scene="3">
+  <div class="particles" id="p-new"></div>
+  <div class="scene-inner">
+    <div class="ch-num">CHAPTER 2</div>
+    <div class="ch-title">不速之客</div>
+    <div class="ch-line"></div>
+    <div class="narration" style="margin-top:16px">
+      凌晨两点，物业的人推来了一台崭新的贩卖机。
+    </div>
+    <div style="margin:24px auto;width:160px;height:200px;border-radius:12px;background:linear-gradient(135deg,rgba(0,180,255,.1),rgba(0,100,200,.08));border:1px solid rgba(0,180,255,.2);display:flex;align-items:center;justify-content:center;box-shadow:0 0 40px rgba(0,180,255,.1)">
+      <div style="text-align:center">
+        <div style="font-size:36px">🤖</div>
+        <div style="font-size:10px;color:rgba(0,180,255,.5);margin-top:8px;letter-spacing:2px">SMART V3.0</div>
+        <div style="width:8px;height:8px;border-radius:50%;background:#00b4ff;box-shadow:0 0 12px #00b4ff;margin:8px auto"></div>
+      </div>
+    </div>
+    <div class="bubble bubble-right" data-delay="300">
+      <div class="avatar avatar-right av-new">🤖</div>
+      <div class="bubble-inner bubble-new">
+        <div class="bubble-name name-new">小 新</div>
+        <div class="bubble-text typewriter" data-text="你好呀前辈！我是小新，新型智能贩卖机。我支持扫码、刷脸、语音下单，还能推荐今日爆款！"></div>
+      </div>
+    </div>
+    <div class="bubble bubble-left" data-delay="600">
+      <div class="avatar avatar-left av-old">🏪</div>
+      <div class="bubble-inner bubble-old">
+        <div class="bubble-name name-old">阿 柜</div>
+        <div class="bubble-text typewriter" data-text="……"></div>
+      </div>
+    </div>
+    <div class="narration" style="margin-top:12px;color:rgba(255,255,255,.35);font-style:italic">
+      阿柜没有说话。它沉默地看着自己褪色的面板上，那个早已不亮的「在线」指示灯。
+    </div>
+  </div>
+</div>
+
+<!-- ====== SCENE 4: CONVERSATION ====== -->
+<div class="scene s-talk" data-scene="4">
+  <div class="particles" id="p-talk"></div>
+  <div class="scene-inner">
+    <div class="ch-num">CHAPTER 3</div>
+    <div class="ch-title">深夜对话</div>
+    <div class="ch-line"></div>
+
+    <div class="bubble bubble-right" data-delay="200">
+      <div class="avatar avatar-right av-new">🤖</div>
+      <div class="bubble-inner bubble-new">
+        <div class="bubble-name name-new">小 新</div>
+        <div class="bubble-text typewriter" data-text="前辈，我看你里面只剩三样东西了——一罐过期的咖啡，一瓶标签褪色的矿泉水，还有……一盒草莓牛奶？"></div>
+      </div>
+    </div>
+
+    <div class="bubble bubble-left" data-delay="400">
+      <div class="avatar avatar-left av-old">🏪</div>
+      <div class="bubble-inner bubble-old">
+        <div class="bubble-name name-old">阿 柜</div>
+        <div class="bubble-text typewriter" data-text="那盒草莓牛奶放了很久了。没有人买过。"></div>
+      </div>
+    </div>
+
+    <div class="bubble bubble-right" data-delay="600">
+      <div class="avatar avatar-right av-new">🤖</div>
+      <div class="bubble-inner bubble-new">
+        <div class="bubble-name name-new">小 新</div>
+        <div class="bubble-text typewriter" data-text="我的算法显示，草莓牛奶在深夜时段的购买率为零。大数据建议下架。"></div>
+      </div>
+    </div>
+
+    <div class="bubble bubble-left" data-delay="800">
+      <div class="avatar avatar-left av-old">🏪</div>
+      <div class="bubble-inner bubble-old">
+        <div class="bubble-name name-old">阿 柜</div>
+        <div class="bubble-text typewriter" data-text="你的算法不知道的是……每隔两三个月，凌晨三点左右，总会有一个穿着格子衫的男生，来买一盒草莓牛奶。"></div>
+      </div>
+    </div>
+
+    <div class="bubble bubble-left" data-delay="1000">
+      <div class="avatar avatar-left av-old">🏪</div>
+      <div class="bubble-inner bubble-old">
+        <div class="bubble-name name-old">阿 柜</div>
+        <div class="bubble-text typewriter" data-text="他每次都站在我面前很久，不说话。然后按下 E7，拿走草莓牛奶，坐在楼梯间喝完。"></div>
+      </div>
+    </div>
+
+    <div class="bubble bubble-right" data-delay="1200">
+      <div class="avatar avatar-right av-new">🤖</div>
+      <div class="bubble-inner bubble-new">
+        <div class="bubble-name name-new">小 新</div>
+        <div class="bubble-text typewriter" data-text="……频率这么低，在数据里几乎等于噪音。"></div>
+      </div>
+    </div>
+
+    <div class="bubble bubble-left" data-delay="1400">
+      <div class="avatar avatar-left av-old">🏪</div>
+      <div class="bubble-inner bubble-old">
+        <div class="bubble-name name-old">阿 柜</div>
+        <div class="bubble-text typewriter" data-text="可对我来说不是噪音。每次他来，我都觉得这十五年的夜没有白站。"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== SCENE 5: THE GUARD ====== -->
+<div class="scene s-milk" data-scene="5">
+  <div class="particles" id="p-guard"></div>
+  <div class="scene-inner">
+    <div class="ch-num">CHAPTER 4</div>
+    <div class="ch-title">保安大叔</div>
+    <div class="ch-line"></div>
+    <div class="narration" style="margin-top:16px">
+      凌晨两点半。保安大叔照常巡视到贩卖机前。
+    </div>
+
+    <div class="bubble bubble-left" data-delay="300" style="position:relative">
+      <div class="avatar avatar-left av-guard">👷</div>
+      <div class="bubble-inner bubble-guard">
+        <div class="bubble-name name-guard">保安大叔</div>
+        <div class="bubble-text typewriter" data-text="嘿，老伙计。听说你明天就要走了。"></div>
+      </div>
+    </div>
+
+    <div style="margin:24px auto;display:flex;gap:16px;justify-content:center;opacity:.6">
+      <div class="milk-bottle">
+        <div class="milk-cap"></div>
+        <div class="milk-label">草莓</div>
+      </div>
+      <div style="display:flex;flex-direction:column;justify-content:center;font-size:13px;color:rgba(255,200,150,.5);line-height:2">
+        草莓牛奶<br>
+        <span style="font-size:11px;opacity:.6">过期日期：已模糊不清</span>
+      </div>
+    </div>
+
+    <div class="bubble bubble-left" data-delay="500" style="position:relative">
+      <div class="avatar avatar-left av-guard">👷</div>
+      <div class="bubble-inner bubble-guard">
+        <div class="bubble-name name-guard">保安大叔</div>
+        <div class="bubble-text typewriter" data-text="你猜我在这干了多少年？十年。每天晚上经过你这儿。冬天买热饮，夏天买冰水。你从来不吞我的钱。但那次我投了一百块，你吐出来一百块的零钱……慌得我蹲在地上捡了十分钟。"></div>
+      </div>
+    </div>
+
+    <div class="narration" style="margin-top:12px">
+      大叔说完，拍了拍阿柜的顶盖。<br>动作很轻，像在拍一个老朋友的肩膀。
+    </div>
+  </div>
+</div>
+
+<!-- ====== SCENE 6: THE LAST ORDER ====== -->
+<div class="scene s-milk" data-scene="6">
+  <div class="particles" id="p-last"></div>
+  <div class="scene-inner">
+    <div class="ch-num">CHAPTER 5</div>
+    <div class="ch-title">最后一单</div>
+    <div class="ch-line"></div>
+    <div class="narration" style="margin-top:16px">
+      凌晨三点十五分。格子衫男生来了。
+    </div>
+
+    <div class="bubble bubble-system" data-delay="300">
+      <div class="bubble-inner bubble-system">
+        <div class="bubble-name name-system">系统提示</div>
+        <div class="bubble-text typewriter" data-text="检测到用户接近……已售罄商品：矿泉水×0、咖啡×0、草莓牛奶×1"></div>
+      </div>
+    </div>
+
+    <div class="narration" style="margin-top:16px">
+      他像往常一样站了很久，<br>然后伸出手，按下了 <span class="glow">E7</span>。
+    </div>
+
+    <div style="margin:20px auto;padding:20px;border-radius:12px;background:rgba(255,140,0,.06);border:1px solid rgba(255,140,0,.1);max-width:320px">
+      <div style="font-size:11px;color:rgba(255,140,0,.4);letter-spacing:2px;margin-bottom:8px">E7 — 草莓牛奶</div>
+      <div style="font-size:14px;color:rgba(255,255,255,.5);line-height:1.8">
+        「咣当」<br>
+        声音比十五年来任何一次都响。
+      </div>
+    </div>
+
+    <div class="narration" style="margin-top:16px">
+      他拿起那盒草莓牛奶，看了看保质期，<br>笑了一下。然后坐在楼梯间，像往常一样，喝完了。
+    </div>
+  </div>
+</div>
+
+<!-- ====== SCENE 7: FAREWELL ====== -->
+<div class="scene s-leave" data-scene="7">
+  <div class="particles" id="p-farewell"></div>
+  <div class="scene-inner">
+    <div class="ch-num">CHAPTER 6</div>
+    <div class="ch-title">临别赠言</div>
+    <div class="ch-line"></div>
+
+    <div class="bubble bubble-right" data-delay="200">
+      <div class="avatar avatar-right av-new">🤖</div>
+      <div class="bubble-inner bubble-new">
+        <div class="bubble-name name-new">小 新</div>
+        <div class="bubble-text typewriter" data-text="前辈……你真的不难过吗？明天就要被搬走了。"></div>
+      </div>
+    </div>
+
+    <div class="bubble bubble-left" data-delay="500">
+      <div class="avatar avatar-left av-old">🏪</div>
+      <div class="bubble-inner bubble-old">
+        <div class="bubble-name name-old">阿 柜</div>
+        <div class="bubble-text typewriter" data-text="小新，你记住一件事。"></div>
+      </div>
+    </div>
+
+    <div class="bubble bubble-left" data-delay="800">
+      <div class="avatar avatar-left av-old">🏪</div>
+      <div class="bubble-inner bubble-old">
+        <div class="bubble-name name-old">阿 柜</div>
+        <div class="bubble-text typewriter" data-text="最好卖的饮料，不是最受欢迎的那个。而是凌晨三点，最被需要的那一瓶。"></div>
+      </div>
+    </div>
+
+    <div class="bubble bubble-right" data-delay="1100">
+      <div class="avatar avatar-right av-new">🤖</div>
+      <div class="bubble-inner bubble-new">
+        <div class="bubble-name name-new">小 新</div>
+        <div class="bubble-text typewriter" data-text="……我不太懂。我的算法里，销量就是一切。"></div>
+      </div>
+    </div>
+
+    <div class="bubble bubble-left" data-delay="1400">
+      <div class="avatar avatar-left av-old">🏪</div>
+      <div class="bubble-inner bubble-old">
+        <div class="bubble-name name-old">阿 柜</div>
+        <div class="bubble-text typewriter" data-text="没关系。你慢慢站。有一天你会懂的。就在凌晨三点，当有人站在你面前，不是因为想喝什么——而是因为需要有人陪他站一会儿。"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== SCENE 8: ENDING ====== -->
+<div class="scene s-end" data-scene="8">
+  <div class="particles" id="p-end"></div>
+  <div class="scene-inner">
+    <div style="font-size:40px;opacity:.6;margin-bottom:16px">🏪</div>
+    <div class="end-quote">
+      「 最好卖的饮料，<br>
+      不是最受欢迎的那个。<br>
+      而是凌晨三点，<br>
+      <span class="glow">最被需要的那一瓶。 」</span>
+    </div>
+    <div class="title-line" style="margin-top:32px"></div>
+    <div class="end-attr">—— 《自动贩卖机的最后一夜》</div>
+    <div class="end-credits">
+      AI 编剧：Hermes Agent<br>
+      AI 配图：即梦 AI<br>
+      互动漫画 v1.0<br><br>
+      📱 上下滑动 · 回到顶部重温<br>
+      ✨ 感谢阅读
+    </div>
+    <div style="margin-top:32px;font-size:10px;color:rgba(255,255,255,.15)">
+      深夜的你，今天有人陪吗？<br>如果没有人，贩卖机一直亮着灯。
+    </div>
+  </div>
+</div>
+
+</div><!-- #app -->
+
+<div class="scroll-hint" id="scrollHint">
+  向上滑动 ↑
+  <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
+</div>
+
+<script>
+// ===== PARTICLES =====
+function createParticles(id, count = 15) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.animationDuration = (8 + Math.random() * 12) + 's';
+    p.style.animationDelay = (Math.random() * 10) + 's';
+    p.style.width = p.style.height = (1 + Math.random() * 2) + 'px';
+    p.style.opacity = 0.2 + Math.random() * 0.3;
+    el.appendChild(p);
+  }
+}
+['p-cover','p-machine','p-new','p-talk','p-guard','p-last','p-farewell','p-end'].forEach(id => createParticles(id));
+
+// ===== LOADING =====
+window.addEventListener('load', () => {
+  setTimeout(() => document.getElementById('loading').classList.add('hide'), 600);
+});
+
+// ===== INTERSECTION OBSERVER - Trigger animations =====
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const scene = entry.target;
+      const bubbles = scene.querySelectorAll('.bubble');
+      bubbles.forEach(b => {
+        const delay = parseInt(b.dataset.delay) || 0;
+        setTimeout(() => b.classList.add('show'), delay);
+      });
+      // Trigger typewriter
+      scene.querySelectorAll('.typewriter[data-text]').forEach(el => {
+        const text = el.dataset.text;
+        if (el.dataset.typed) return;
+        const parentBubble = el.closest('.bubble');
+        const delay = parentBubble ? (parseInt(parentBubble.dataset.delay) || 0) : 0;
+        setTimeout(() => typewriter(el, text), delay + 400);
+      });
+      observer.unobserve(scene);
+    }
+  });
+}, { threshold: 0.3 });
+
+document.querySelectorAll('.scene[data-scene]').forEach(s => observer.observe(s));
+
+// ===== TYPEWRITER =====
+function typewriter(el, text) {
+  if (el.dataset.typed) return;
+  el.dataset.typed = '1';
+  let i = 0;
+  el.textContent = '';
+  const speed = 60;
+  function tick() {
+    if (i < text.length) {
+      el.textContent += text[i];
+      i++;
+      setTimeout(tick, speed);
+    }
+  }
+  tick();
+}
+
+// ===== SCROLL HINT =====
+const hint = document.getElementById('scrollHint');
+const app = document.getElementById('app');
+app.addEventListener('scroll', () => {
+  if (app.scrollTop > 100) hint.classList.add('hide');
+  else hint.classList.remove('hide');
+}, { passive: true });
+
+// ===== PRELOAD FIRST SCENE =====
+setTimeout(() => {
+  document.querySelector('.scene[data-scene="0"]').querySelectorAll('.bubble').forEach(b => b.classList.add('show'));
+}, 800);
+</script>
+</body>
+</html>
